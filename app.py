@@ -7,7 +7,6 @@ api = Api(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 db = SQLAlchemy(app)
 
-
 class ProductModel(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     sku = db.Column(db.String(), unique=True, nullable = False)
@@ -15,8 +14,6 @@ class ProductModel(db.Model):
     _type = db.Column(db.String(), nullable = False)
     price = db.Column(db.Float, nullable = False)
 
-    
-    
     def __repr__(self):
         return f'Product(sku = {self.sku}, name = {self.name}, type = {self._type}, price = {self.price}'
 
@@ -78,8 +75,7 @@ def postProduct(args):
     if product:
         abort(409, message = 'product with that sku already exists')
 
-    print(args)
-
+    
     new_product = ProductModel(sku = args['sku'], name = args['name'], _type = args['type'], price = args['price'])
     db.session.add(new_product)
     db.session.commit()
@@ -161,7 +157,6 @@ class ProductList(Resource):
         return postProduct(args)
 
         
-
 api.add_resource(ProductID, '/api/v1/products/id/<int:id>')
 api.add_resource(ProductSKU, '/api/v1/products/sku/<string:sku>')
 api.add_resource(ProductList, '/api/v1/products')

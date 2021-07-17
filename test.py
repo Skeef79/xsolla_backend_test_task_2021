@@ -1,20 +1,208 @@
 import requests
-from requests.api import request
-from random import random
+import uuid
+import random
 
-BASE = "http://127.0.0.1:5000/"
+from requests.models import Response
 
-
-#adding multiple products
-
-for i in range(12,13):
-    response = requests.post(BASE + "api/v1/products", data = {"sku": str(i), "name": f"name{i}", "type": "test", "price": str(random())})
-    print(response.json())
+BASE = 'http://127.0.0.1:5000/api/v1/products'
+names = ['Dota 2', 'CS:GO', 'Valorant', 'Minecraft', 'Stronghold', 'Warcraft 3', 'Tarkov', 'Call of Duty']
+types = ['Game', 'T-Shitr', 'Cards', 'Hoodie', 'Cap', 'Pants', 'Jacket', 'Currency']
 
 
-#response = requests.post(BASE + 'api/v1/products', data = {'sku': 'G-5-40', 'name': 'CS:GO', 'type': 'game', 'price': '11.5'})
-#response = requests.patch(BASE + 'api/v1/products', data = {'id':'1', 'price': '13'})
+def randomName():
+    return random.choice(names)
 
+def randomType():
+    return random.choice(types)
+
+def randomPrice():
+    return random.randint(0,40) + random.random()
+
+def randomSKU():
+    return str(uuid.uuid4())
+
+def randomProduct():
+    return {
+        'sku': randomSKU(),
+        'name': randomName(),
+        'type': randomType(),
+        'price': randomPrice()
+    }
+
+def isProduct(result):
+    assert 'id' in result
+    assert 'sku' in result
+    assert 'name' in result
+    assert '_type' in result
+    assert 'price' in result
+    assert len(result) == 5
+
+
+def test_get_list():
+    response = requests.get(BASE)
+    assert response.status_code == 200
+    result = response.json()
+    if len(result)!=0:
+        for product in result:
+            isProduct(product)
+
+    
+def test_get_product_by_id():
+    response = requests.get(f'{BASE}/id/1')
+    assert response.status_code == 200
+
+    result = response.json()
+    isProduct(result)
+
+
+
+def test_get_product_by_sku():
+    response = requests.get(f'{BASE}/sku/G-10-32')
+    assert response.status_code == 200
+
+    result = response.json()
+    isProduct(result)
+
+    
+def test_post_new_product():
+    response = requests.post(BASE, data = randomProduct())
+    assert response.status_code == 201
+
+    result = response.json()
+    assert 'id' in result
+    assert len(result) == 1
+
+
+def test_post_product_bad_params():
+    response = requests.post(BASE)
+    assert response.status_code == 400
+
+    response = requests.post(BASE,data = {'name': 'test'})
+    assert response.status_code == 400
+    assert 'message' in response.json()
+    assert len(response.json()) == 1
+
+    response = requests.post(BASE, data = {'sku': randomSKU()})
+    assert response.status_code == 400
+    assert 'message' in response.json()
+    assert len(response.json()) == 1
+
+    response = requests.post(BASE,data = {'type': 'test'})
+    assert response.status_code == 400
+    assert 'message' in response.json()
+    assert len(response.json()) == 1
+
+    response = requests.post(BASE,data = {'price': '10'})
+    assert response.status_code == 400
+    assert 'message' in response.json()
+    assert len(response.json()) == 1
+
+
+def test_post_product_with_used_sku():
+    response = requests.post(BASE, data = {'sku': 'G-10-32',
+        'name': 'Dota 2',
+        'type': 'game',
+        'price': '13.0'})
+
+    assert response.status_code == 409    
+
+def test_patch_product_by_id():
+    response = requests.patch(f'{BASE}/id/1', data = {})
+    assert response.status_code == 200
+
+    result = response.json()
+    isProduct(result)
+
+    new_name = randomName()
+    new_type = randomType()
+    new_price = randomPrice()
+
+    response = requests.patch(f'{BASE}/id/1', data = {'name': new_name, 'type': new_type, 'price': new_price})
+    assert response.status_code == 200
+
+    result = response.json()
+    isProduct(result)
+
+    assert result['name'] == new_name
+    assert result['_type'] == new_type
+    assert result['price'] == new_price
+
+
+def test_patch_product_id_not_exists():
+    products = requests.get(BASE).json()
+    idees = [product['id'] for product in products]
+    response = requests.patch(f'{BASE}/id/{max(idees)+1}')
+    assert response.status_code == 404
+    assert 'message' in response.json()
+    assert len(response.json()) == 1
+
+
+def test_patch_product_by_sku():
+    response = requests.patch(f'{BASE}/sku/G-10-32', data = {})
+    assert response.status_code == 200
+
+    result = response.json()
+    isProduct(result)
+
+    new_name = randomName()
+    new_type = randomType()
+    new_price = randomPrice()
+
+    response = requests.patch(f'{BASE}/sku/G-10-32', data = {'name': new_name, 'type': new_type, 'price': new_price})
+    assert response.status_code == 200
+
+    result = response.json()
+    isProduct(result)
+
+    assert result['name'] == new_name
+    assert result['_type'] == new_type
+    assert result['price'] == new_price
+
+
+def test_patch_product_sku_not_exists():
+    response = requests.patch(f'{BASE}/sku/{randomSKU()}')
+    assert response.status_code == 404
+    assert 'message' in response.json()
+    assert len(response.json()) == 1
+
+
+def test_delete_product_by_id():
+    new_product = randomProduct()
+    response = requests.post(BASE, data = new_product)
+    p_id = response.json()['id']
+
+    response = requests.delete(f'{BASE}/id/{p_id}')
+    assert response.status_code == 204
+    
+
+def test_delete_product_id_not_exist():
+    products = requests.get(BASE).json()
+    idees = [product['id'] for product in products]
+    response = requests.delete(f'{BASE}/id/{max(idees)+1}')
+    
+    assert response.status_code == 404
+    assert 'message' in response.json()
+    assert len(response.json()) == 1
+
+
+def test_delete_product_by_sku():
+    new_product = randomProduct()
+    response = requests.post(BASE, data = new_product)
+    p_id = response.json()['id']
+    response = requests.get(f'{BASE}/id/{p_id}')
+    sku = response.json()['sku']
+
+    response = requests.delete(f'{BASE}/sku/{sku}')
+    assert response.status_code == 204
+
+
+def test_delete_product_id_not_exist():
+    sku = randomSKU()
+    response = requests.delete(f'{BASE}/sku/{sku}')
+
+    assert response.status_code == 404
+    assert 'message' in response.json()
+    assert len(response.json()) == 1
 
 
 
