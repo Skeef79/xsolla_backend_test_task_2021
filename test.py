@@ -1,7 +1,6 @@
 import requests
 import uuid
 import random
-from requests.api import request
 
 from requests.models import Response
 
