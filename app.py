@@ -30,6 +30,10 @@ product_patch_args.add_argument('name', type = str, help = 'Product name')
 product_patch_args.add_argument('type', type = str, help = 'Product type is required')
 product_patch_args.add_argument('price', type = float, help = 'Product price')
 
+products_get_args = reqparse.RequestParser()
+products_get_args.add_argument('sort_by',type = str, help = 'Sort items by fields')
+products_get_args.add_argument('filter_by', type = str, help = 'Filter items by fields')
+
 resource_fields = {
 	'id': fields.Integer,
     'sku': fields.String,
@@ -75,7 +79,7 @@ def postProduct(args):
     if product:
         abort(409, message = 'product with that sku already exists')
 
-    
+
     new_product = ProductModel(sku = args['sku'], name = args['name'], _type = args['type'], price = args['price'])
     db.session.add(new_product)
     db.session.commit()
@@ -132,6 +136,12 @@ class ProductID(Resource):
         return deleteProduct(None, id, None)
 
 
+def getProductsList(args):
+    
+    products = ProductModel.query.all()
+    return products
+    
+
 class ProductSKU(Resource):
     @marshal_with(resource_fields)
     def get(self, sku):
@@ -149,8 +159,8 @@ class ProductSKU(Resource):
 class ProductList(Resource):
     @marshal_with(resource_fields)
     def get(self):
-        products = ProductModel.query.all()
-        return products
+        args = products_get_args.parse_args()
+        return getProductsList(args)
 
     def post(self):
         args = product_post_args.parse_args()
@@ -162,4 +172,4 @@ api.add_resource(ProductSKU, '/api/v1/products/sku/<string:sku>')
 api.add_resource(ProductList, '/api/v1/products')
 
 if __name__ == '__main__':
-    app.run(debug = True)
+    app.run()
