@@ -6,8 +6,16 @@ import os
 app = Flask(__name__)
 api = Api(app)
 
+ENV = 'prod'
+SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')
 
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+if ENV == 'dev':
+    app.debug = True
+else:
+    app.debug = False
+    SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace("://", "ql://", 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
