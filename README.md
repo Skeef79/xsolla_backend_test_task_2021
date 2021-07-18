@@ -17,7 +17,7 @@
 
 ## Описание API
 ### Получение информации о товаре/товарах
-- GET /api/v1/products
+- GET api/v1/products
   - Метод возвращает список всех товаров
   - 
 - GET api/v1/products/id/<p_id> 
